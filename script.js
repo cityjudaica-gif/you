@@ -28,9 +28,8 @@ document.getElementById('downloadForm').addEventListener('submit', async functio
         const link = document.createElement('a');
         link.href = downloadUrl;
 
-        // Из заголовка Content-Disposition пытаемся получить имя файла
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = `download.${format === 'mp4' ? 'mp4' : 'mp3'}`;
+        let filename = `download.${format === 'mp4' ? 'mp4' : 'm4a'}`;
         if (contentDisposition) {
             const match = contentDisposition.match(/filename="(.+)"/);
             if (match) filename = match[1];
