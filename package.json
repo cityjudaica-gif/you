@@ -1,15 +1,13 @@
 {
   "name": "youtube-downloader",
   "version": "1.0.0",
-  "description": "YouTube Video/Audio Downloader",
+  "description": "YouTube Video/Audio Downloader for Vercel",
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev"
   },
   "dependencies": {
-    "ytdl-core": "^4.11.5",
-    "fluent-ffmpeg": "^2.1.2",
-    "ffmpeg-static": "^5.2.0"
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "vercel": "^32.0.0"
