@@ -10,7 +10,7 @@
     <div class="container">
         <h1>YouTube Downloader</h1>
         <form id="downloadForm">
-            <input type="text" id="urlInput" placeholder="Введите ссылку на YouTube видео" required />
+            <input type="text" id="urlInput" placeholder="Вставьте ссылку на YouTube видео" required />
             <div class="format-group">
                 <label>
                     <input type="radio" name="format" value="mp4" checked /> Видео (MP4)
@@ -19,7 +19,7 @@
                     <input type="radio" name="format" value="mp3" /> Аудио (M4A / AAC)
                 </label>
             </div>
-            <button type="submit">Скачать</button>
+            <button type="submit" id="submitBtn">Скачать</button>
         </form>
         <div id="status"></div>
     </div>
