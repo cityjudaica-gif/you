@@ -1,13 +1,13 @@
 {
   "name": "youtube-downloader",
-  "version": "1.0.0",
-  "description": "YouTube Downloader for Vercel",
+  "version": "2.0.0",
+  "description": "YouTube Downloader with @distube/ytdl-core",
   "main": "api/download.js",
   "scripts": {
     "dev": "vercel dev"
   },
   "dependencies": {
-    "ytdl-core": "^4.11.5"
+    "@distube/ytdl-core": "^4.13.5"
   },
   "devDependencies": {
     "vercel": "^32.0.0"
