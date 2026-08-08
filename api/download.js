@@ -1,4 +1,5 @@
 const ytdl = require('ytdl-core');
+const https = require('https');
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
@@ -7,43 +8,56 @@ module.exports = async (req, res) => {
 
     try {
         const { url, format } = req.body;
-        if (!url) {
-            return res.status(400).send('Missing URL');
-        }
+        if (!url) return res.status(400).send('Missing URL');
+        if (!ytdl.validateURL(url)) return res.status(400).send('Invalid YouTube URL');
 
-        // Проверяем валидность URL
-        if (!ytdl.validateURL(url)) {
-            return res.status(400).send('Invalid YouTube URL');
-        }
+        // --- Настройка заголовков для имитации браузера ---
+        const requestOptions = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+            },
+            // Если нужен прокси - раскомментируйте и укажите
+            // agent: new https.Agent({ proxy: 'http://ваш-прокси:8080' })
+        };
 
-        // Пытаемся получить информацию о видео
+        // --- Получение информации с повторными попытками (на случай 410) ---
         let info;
         try {
-            info = await ytdl.getInfo(url);
+            info = await ytdl.getInfo(url, { requestOptions });
         } catch (err) {
-            // Обрабатываем специфические ошибки ytdl-core
-            if (err.message && err.message.includes('410')) {
-                return res.status(410).send('Video is unavailable (gone)');
+            // Если ошибка 410 - пробуем ещё раз без некоторых параметров или с другим качеством
+            if (err.message.includes('410')) {
+                // Можно попробовать получить информацию без дополнительных опций
+                try {
+                    info = await ytdl.getInfo(url);
+                } catch (retryErr) {
+                    console.error('Retry failed:', retryErr);
+                    return res.status(410).send('Video unavailable (410) – возможно, удалено или региональный блок.');
+                }
+            } else {
+                throw err; // пробрасываем другие ошибки
             }
-            if (err.statusCode === 403) {
-                return res.status(403).send('Access forbidden (region block or age restriction)');
-            }
-            // Другие ошибки
-            console.error('ytdl error:', err);
-            return res.status(500).send('Failed to fetch video info: ' + err.message);
         }
 
         const title = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
 
+        // --- Формирование потока ---
         if (format === 'mp4') {
-            // Видео – используем качество 360p (быстро)
-            const stream = ytdl(url, { quality: 'lowest' });
+            const stream = ytdl(url, {
+                quality: 'lowest',
+                requestOptions,
+            });
             res.setHeader('Content-Type', 'video/mp4');
             res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
             stream.pipe(res);
         } else if (format === 'mp3') {
-            // Аудио – M4A (без конвертации)
-            const stream = ytdl(url, { quality: 'highestaudio', filter: 'audioonly' });
+            const stream = ytdl(url, {
+                quality: 'highestaudio',
+                filter: 'audioonly',
+                requestOptions,
+            });
             res.setHeader('Content-Type', 'audio/mp4');
             res.setHeader('Content-Disposition', `attachment; filename="${title}.m4a"`);
             stream.pipe(res);
@@ -52,6 +66,6 @@ module.exports = async (req, res) => {
         }
     } catch (error) {
         console.error('Server error:', error);
-        res.status(500).send('Internal server error: ' + error.message);
+        res.status(500).send('Internal error: ' + error.message);
     }
 };
