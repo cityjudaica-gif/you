@@ -1,60 +1,43 @@
 const ytdl = require('ytdl-core');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require('ffmpeg-static');
-const { PassThrough } = require('stream');
-
-ffmpeg.setFfmpegPath(ffmpegStatic);
 
 module.exports = async (req, res) => {
-    // Разрешаем только POST (можно также GET)
+    // Разрешаем только POST
     if (req.method !== 'POST') {
-        res.status(405).send('Method Not Allowed');
-        return;
-    }
-
-    const { url, format } = req.body;
-    if (!url) {
-        res.status(400).send('Missing url');
-        return;
+        return res.status(405).send('Method Not Allowed');
     }
 
     try {
+        const { url, format } = req.body;
+        if (!url) {
+            return res.status(400).send('Missing url');
+        }
+
         if (!ytdl.validateURL(url)) {
-            res.status(400).send('Invalid YouTube URL');
-            return;
+            return res.status(400).send('Invalid YouTube URL');
         }
 
         const info = await ytdl.getInfo(url);
+        // Очищаем имя файла от недопустимых символов
         const title = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
 
         if (format === 'mp4') {
-            // Видео MP4
-            const stream = ytdl(url, { quality: 'highestvideo' });
+            // Видео – берём качество 360p (быстро и укладывается в лимиты Vercel)
+            // Если нужно выше – замените на 'highestvideo', но тогда могут быть таймауты
+            const stream = ytdl(url, { quality: 'lowest' }); // или '18' для 360p
             res.setHeader('Content-Type', 'video/mp4');
             res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
             stream.pipe(res);
         } else if (format === 'mp3') {
-            // Аудио → MP3
-            const audioStream = ytdl(url, { quality: 'highestaudio', filter: 'audioonly' });
-            const command = ffmpeg(audioStream)
-                .audioBitrate(128)
-                .audioCodec('libmp3lame')
-                .format('mp3')
-                .on('error', (err) => {
-                    console.error('FFmpeg error:', err);
-                    if (!res.headersSent) {
-                        res.status(500).send('Ошибка конвертации в MP3');
-                    }
-                });
-
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.setHeader('Content-Disposition', `attachment; filename="${title}.mp3"`);
-            command.pipe(res, { end: true });
+            // Аудио – отдаём в формате M4A (AAC) без конвертации
+            const stream = ytdl(url, { quality: 'highestaudio', filter: 'audioonly' });
+            res.setHeader('Content-Type', 'audio/mp4'); // M4A
+            res.setHeader('Content-Disposition', `attachment; filename="${title}.m4a"`);
+            stream.pipe(res);
         } else {
-            res.status(400).send('Неверный формат. Используйте mp4 или mp3');
+            res.status(400).send('Invalid format. Use mp4 or mp3');
         }
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Внутренняя ошибка сервера');
+        console.error('Server error:', error);
+        res.status(500).send('Error: ' + error.message);
     }
 };
