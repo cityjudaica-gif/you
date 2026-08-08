@@ -1,8 +1,8 @@
 {
   "name": "youtube-downloader",
   "version": "1.0.0",
-  "description": "YouTube Video/Audio Downloader for Vercel",
-  "main": "index.js",
+  "description": "YouTube Downloader for Vercel",
+  "main": "api/download.js",
   "scripts": {
     "dev": "vercel dev"
   },
